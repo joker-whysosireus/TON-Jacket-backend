@@ -112,7 +112,7 @@ exports.handler = async (event, context) => {
         const firstName = user.first_name;
         const lastName = user.last_name || "";
         const username = user.username;
-        const avatarUrl = user.photo_url || null;  // Get avatar from Telegram
+        const avatarUrl = user.photo_url || null;
 
         console.log("auth.js: Extracted user data - userId:", userId, "firstName:", firstName, "lastName:", lastName, "username:", username, "avatarUrl:", avatarUrl);
 
@@ -162,146 +162,136 @@ exports.handler = async (event, context) => {
 
         let userDB;
         try {
-            console.log("auth.js: Trying to find user with telegram_user_id:", userId);
+            console.log("auth.js: Trying to find user in tonjacket with telegram_user_id:", userId);
             const { data: existingUser, error: selectError } = await supabase
-                .from('users')
+                .from('tonjacket')
                 .select('*')
                 .eq('telegram_user_id', userId)
                 .single();
 
             if (selectError) {
-                console.error("auth.js: Error finding user in Supabase:", selectError);
+                console.error("auth.js: Error finding user in tonjacket:", selectError);
                 if (selectError.code === 'PGRST116') {
-                    console.log("auth.js: User not found, creating new user in Supabase");
-                    const inviteLink = `https://t.me/liquid_coin_bot?startapp=ref_${userId}`;
-                    const newUserObject = {
+                    console.log("auth.js: User not found, creating new user in tonjacket");
+                    
+                    // Create invite link
+                    const inviteLink = `https://t.me/TONJacketBot?startapp=ref_${userId}`;
+                    
+                    // Create user in tonjacket table
+                    const tonjacketUserObject = {
                         first_name: firstName,
                         last_name: lastName,
                         username: username,
-                        points: 0,
-                        weekly_points: 0,
+                        avatar: avatarUrl,
                         telegram_user_id: userId,
-                        invite_link: inviteLink,
-                        reward_fr: 0,
-                        total_fr: 0,
-                        ton_boost: false,
-                        apps_boost: false,
-                        prem_boost: false,
-                        eth_boost: false,
-                        btc_boost: false,
-                        sol_boost: false,
-                        near_boost: false,
-                        up_storage: false,
-                        up_boosters: false,
-                        payments: [],
                         wallet: "no wallet",
-                        avatar_url: avatarUrl  // Add avatar URL
+                        invited_friends: 0,
+                        coins: 500.000,
+                        coins_for_invite: 0.000,
+                        bet_amount: 0.000,
+                        ton_amount: 100.000,
+                        invite_link: inviteLink
                     };
 
-                    console.log("auth.js: Creating new user with data:", newUserObject);
+                    console.log("auth.js: Creating user in tonjacket table:", tonjacketUserObject);
                     const { data: newUser, error: insertError } = await supabase
-                        .from('users')
-                        .insert([newUserObject])
+                        .from('tonjacket')
+                        .insert([tonjacketUserObject])
                         .select('*')
                         .single();
 
                     if (insertError) {
-                        console.error("auth.js: Error creating user in Supabase:", insertError);
+                        console.error("auth.js: Error creating user in tonjacket table:", insertError);
                         return {
                             statusCode: 500,
                             headers: headers,
-                            body: JSON.stringify({ isValid: false, error: "Failed to create user in Supabase" }),
+                            body: JSON.stringify({ isValid: false, error: "Failed to create user in tonjacket table" }),
                         };
                     }
 
-                    console.log("auth.js: User successfully created in Supabase:", newUser);
+                    console.log("auth.js: User successfully created in tonjacket table:", newUser);
                     userDB = newUser;
+
+                    // Handle referral system
                     if (referralCode) {
                         console.log("auth.js: Referral code found (from start_param):", referralCode);
 
-                        const { data: referrer, error: selectError } = await supabase
-                            .from('users')
+                        const { data: referrer, error: referrerSelectError } = await supabase
+                            .from('tonjacket')
                             .select('*')
                             .eq('telegram_user_id', referralCode)
                             .single();
 
-                        if (selectError) {
-                            console.error("auth.js: Error finding referrer in Supabase:", selectError, "Referral Code:", referralCode);
+                        if (referrerSelectError) {
+                            console.error("auth.js: Error finding referrer in tonjacket:", referrerSelectError, "Referral Code:", referralCode);
                         }
+                        
                         if (referrer) {
                             console.log("auth.js: Referrer found:", referrer);
-                            const newTotalFR = referrer.total_fr + 1;
-                            const rewardPoints = 205.033;
+                            
+                            // Update referrer in tonjacket table
+                            const newCoinsForInvite = parseFloat(((referrer.coins_for_invite || 0) + 50).toFixed(3));
+                            const newCoins = parseFloat(((referrer.coins || 0) + 50).toFixed(3));
+                            const newInvitedFriends = (referrer.invited_friends || 0) + 1;
 
-                            // Round values to 5 decimal places
-                            const newRewardFR = parseFloat(((referrer.reward_fr || 0) + rewardPoints).toFixed(3));
-                            const newPoints = parseFloat(((referrer.points || 0) + rewardPoints).toFixed(3));
-
-                            const { data: updatedUser, error: updateError } = await supabase
-                                .from('users')
+                            const { data: updatedReferrer, error: updateReferrerError } = await supabase
+                                .from('tonjacket')
                                 .update({
-                                    total_fr: newTotalFR,
-                                    reward_fr: newRewardFR,
-                                    points: newPoints,
+                                    invited_friends: newInvitedFriends,
+                                    coins_for_invite: newCoinsForInvite,
+                                    coins: newCoins
                                 })
-                                .eq('id', referrer.id)
+                                .eq('telegram_user_id', referralCode)
                                 .select('*')
                                 .single();
 
-                            if (updateError) {
-                                console.error("auth.js: Error updating total_fr, reward_fr and points:", updateError, "Referrer ID:", referrer.id);
+                            if (updateReferrerError) {
+                                console.error("auth.js: Error updating tonjacket for referrer:", updateReferrerError);
                             } else {
-                                console.log("auth.js: Successfully updated total_fr, reward_fr and points for referrer:", updatedUser);
+                                console.log("auth.js: Successfully updated tonjacket for referrer:", updatedReferrer);
                             }
                         } else {
-                            console.error("auth.js: Referrer not found", "Referral Code:", referralCode);
+                            console.error("auth.js: Referrer not found in tonjacket", "Referral Code:", referralCode);
                         }
                     }
                 } else {
                     return {
                         statusCode: 500,
                         headers: headers,
-                        body: JSON.stringify({ isValid: false, error: "Failed to find user in Supabase" }),
+                        body: JSON.stringify({ isValid: false, error: "Failed to find user in tonjacket table" }),
                     };
                 }
             } else {
-                console.log("auth.js: User found in Supabase:", existingUser);
+                console.log("auth.js: User found in tonjacket table:", existingUser);
                 userDB = existingUser;
                 
                 // Update avatar if it's missing but we have a new one
-                if (!userDB.avatar_url && avatarUrl) {
-                    console.log("auth.js: Updating user avatar");
+                if (!userDB.avatar && avatarUrl) {
+                    console.log("auth.js: Updating user avatar in tonjacket");
                     const { data: updatedUser, error: updateError } = await supabase
-                        .from('users')
-                        .update({ avatar_url: avatarUrl })
-                        .eq('id', userDB.id)
+                        .from('tonjacket')
+                        .update({ avatar: avatarUrl })
+                        .eq('telegram_user_id', userId)
                         .select('*')
                         .single();
 
                     if (!updateError) {
-                        console.log("auth.js: Avatar updated successfully");
+                        console.log("auth.js: Avatar updated successfully in tonjacket");
                         userDB = updatedUser;
                     } else {
-                        console.error("auth.js: Error updating avatar:", updateError);
+                        console.error("auth.js: Error updating avatar in tonjacket:", updateError);
                     }
                 }
             }
 
-            console.log("auth.js: Returning user data:", {
-                ...userDB,
-                points: parseFloat(userDB.points).toFixed(3),
-            });
+            console.log("auth.js: Returning user data from tonjacket:", userDB);
 
             return {
                 statusCode: 200,
                 headers: headers,
                 body: JSON.stringify({
                     isValid: true, 
-                    userData: {
-                        ...userDB,
-                        points: parseFloat(userDB.points).toFixed(3),
-                        avatar_url: userDB.avatar_url  // Include avatar in response
-                    }
+                    userData: userDB
                 }),
             };
 
