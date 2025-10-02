@@ -1,0 +1,14 @@
+[build]
+  functions = "netlify/functions"
+
+[functions.auth]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."create-invoice"]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."verify-payment"]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."updateWallet"]
+  origin = "https://ton-jacket.netlify.app"
