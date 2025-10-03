@@ -58,25 +58,28 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 500,
                 headers: headers,
-                body: JSON.stringify({ success: false, error: "Error fetching current bet amount" }),
+                body: JSON.stringify({ success: false, error: "Error fetching current bet amount: " + selectError.message }),
             };
         }
 
         const currentBetAmount = parseFloat(user.bet_amount) || 0;
         const newBetAmount = parseFloat((currentBetAmount + betAmount).toFixed(3));
 
-        // Обновляем bet_amount
+        // Обновляем bet_amount без updated_at
         const { data, error: updateError } = await supabase
             .from('tonjacket')
-            .update({ bet_amount: newBetAmount })
-            .eq('telegram_user_id', telegramUserId);
+            .update({ 
+                bet_amount: newBetAmount
+            })
+            .eq('telegram_user_id', telegramUserId)
+            .select();
 
         if (updateError) {
             console.error('Error updating bet amount:', updateError);
             return {
                 statusCode: 500,
                 headers: headers,
-                body: JSON.stringify({ success: false, error: "Error updating bet amount" }),
+                body: JSON.stringify({ success: false, error: "Error updating bet amount: " + updateError.message }),
             };
         }
 
@@ -90,7 +93,7 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error("update-bet.js: Netlify Function error:", error); //err
+        console.error("update-bet.js: Netlify Function error:", error);
         return {
             statusCode: 500,
             headers: headers,

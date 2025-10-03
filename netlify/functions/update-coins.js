@@ -36,7 +36,7 @@ exports.handler = async (event, context) => {
             };
         }
 
-        const { telegramUserId, coinsToAdd = 100 } = requestBody;
+        const { telegramUserId, coinsToAdd = 50 } = requestBody;
 
         if (!telegramUserId) {
             return {
@@ -58,25 +58,28 @@ exports.handler = async (event, context) => {
             return {
                 statusCode: 500,
                 headers: headers,
-                body: JSON.stringify({ success: false, error: "Error fetching current coins" }),
+                body: JSON.stringify({ success: false, error: "Error fetching current coins: " + selectError.message }),
             };
         }
 
         const currentCoins = parseFloat(user.coins) || 0;
         const newCoins = parseFloat((currentCoins + coinsToAdd).toFixed(3));
 
-        // Обновляем coins
+        // Обновляем coins без updated_at
         const { data, error: updateError } = await supabase
             .from('tonjacket')
-            .update({ coins: newCoins })
-            .eq('telegram_user_id', telegramUserId);
+            .update({ 
+                coins: newCoins
+            })
+            .eq('telegram_user_id', telegramUserId)
+            .select();
 
         if (updateError) {
             console.error('Error updating coins:', updateError);
             return {
                 statusCode: 500,
                 headers: headers,
-                body: JSON.stringify({ success: false, error: "Error updating coins" }),
+                body: JSON.stringify({ success: false, error: "Error updating coins: " + updateError.message }),
             };
         }
 
@@ -90,7 +93,7 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error("update-coins.js: Netlify Function error:", error); ///err
+        console.error("update-coins.js: Netlify Function error:", error);
         return {
             statusCode: 500,
             headers: headers,

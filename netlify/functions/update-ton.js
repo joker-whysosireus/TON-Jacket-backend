@@ -46,36 +46,21 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // Обновляем ton_amount (устанавливаем абсолютное значение)
+        // Обновляем ton_amount без updated_at
         const { data, error: updateError } = await supabase
             .from('tonjacket')
             .update({ 
                 ton_amount: parseFloat(tonAmount.toFixed(3))
             })
-            .eq('telegram_user_id', telegramId);
+            .eq('telegram_user_id', telegramId)
+            .select();
 
         if (updateError) {
             console.error('Error updating TON amount:', updateError);
             return {
                 statusCode: 500,
                 headers: headers,
-                body: JSON.stringify({ success: false, error: "Error updating TON amount" }),
-            };
-        }
-
-        // Получаем обновленные данные пользователя для подтверждения
-        const { data: updatedUser, error: selectError } = await supabase
-            .from('tonjacket')
-            .select('ton_amount')
-            .eq('telegram_user_id', telegramId)
-            .single();
-
-        if (selectError) {
-            console.error('Error fetching updated TON amount:', selectError);
-            return {
-                statusCode: 500,
-                headers: headers,
-                body: JSON.stringify({ success: false, error: "Error fetching updated TON amount" }),
+                body: JSON.stringify({ success: false, error: "Error updating TON amount: " + updateError.message }),
             };
         }
 
@@ -84,7 +69,7 @@ exports.handler = async (event, context) => {
             headers: headers,
             body: JSON.stringify({ 
                 success: true, 
-                tonAmount: updatedUser.ton_amount 
+                tonAmount: parseFloat(tonAmount.toFixed(3))
             }),
         };
 
