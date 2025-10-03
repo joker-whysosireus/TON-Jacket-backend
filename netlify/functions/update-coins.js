@@ -65,14 +65,13 @@ exports.handler = async (event, context) => {
         const currentCoins = parseFloat(user.coins) || 0;
         const newCoins = parseFloat((currentCoins + coinsToAdd).toFixed(3));
 
-        // Обновляем coins без updated_at
-        const { data, error: updateError } = await supabase
+        // Обновляем coins
+        const { error: updateError } = await supabase
             .from('tonjacket')
             .update({ 
                 coins: newCoins
             })
-            .eq('telegram_user_id', telegramUserId)
-            .select();
+            .eq('telegram_user_id', telegramUserId);
 
         if (updateError) {
             console.error('Error updating coins:', updateError);

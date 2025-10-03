@@ -65,14 +65,13 @@ exports.handler = async (event, context) => {
         const currentBetAmount = parseFloat(user.bet_amount) || 0;
         const newBetAmount = parseFloat((currentBetAmount + betAmount).toFixed(3));
 
-        // Обновляем bet_amount без updated_at
-        const { data, error: updateError } = await supabase
+        // Обновляем bet_amount
+        const { error: updateError } = await supabase
             .from('tonjacket')
             .update({ 
                 bet_amount: newBetAmount
             })
-            .eq('telegram_user_id', telegramUserId)
-            .select();
+            .eq('telegram_user_id', telegramUserId);
 
         if (updateError) {
             console.error('Error updating bet amount:', updateError);
