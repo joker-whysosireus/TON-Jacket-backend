@@ -63,7 +63,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("updateWallet.js: Error:", error);
+    console.error("updateWallet.js: Error:", error); //err
     return {
       statusCode: 500,
       headers: headers,

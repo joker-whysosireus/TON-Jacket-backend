@@ -14,7 +14,7 @@
   origin = "https://ton-jacket.netlify.app"
 
 [functions."update-coins.js"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://ton-jacket.netlify.app" 
 
-[functions."updateWallet"]
-  origin = "https://ton-jacket.netlify.app"
+[functions."update-bet.js"]
+  origin = "https://ton-jacket.netlify.app" 

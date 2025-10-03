@@ -90,7 +90,7 @@ exports.handler = async (event, context) => {
         };
 
     } catch (error) {
-        console.error("update-bet.js: Netlify Function error:", error);
+        console.error("update-bet.js: Netlify Function error:", error); //err
         return {
             statusCode: 500,
             headers: headers,
