@@ -1,6 +1,6 @@
 // netlify/functions/updateWallet.js
-import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -39,7 +39,7 @@ exports.handler = async (event, context) => {
     }
 
     const { data, error } = await supabase
-      .from('users')
+      .from('tonjacket')
       .update({ wallet: walletAddress })
       .eq('telegram_user_id', userId)
       .select('*')
@@ -63,7 +63,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("updateWallet.js: Error:", error); //err
+    console.error("updateWallet.js: Error:", error);
     return {
       statusCode: 500,
       headers: headers,

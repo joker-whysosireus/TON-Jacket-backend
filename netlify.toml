@@ -22,3 +22,8 @@
 [functions."update-ton"]
   origin = "https://ton-jacket.netlify.app" 
   
+[functions."convertCoinsToTON.js"]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."deposit-ton.js"]
+  origin = "https://ton-jacket.netlify.app"  
