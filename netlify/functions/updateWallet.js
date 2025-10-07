@@ -1,6 +1,6 @@
 // netlify/functions/updateWallet.js
-import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
+import 'dotenv/config';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
@@ -63,7 +63,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error("updateWallet.js: Error:", error);
+    console.error("updateWallet.js: Error:", error); //err
     return {
       statusCode: 500,
       headers: headers,
