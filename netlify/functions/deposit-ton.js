@@ -1,11 +1,14 @@
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
 exports.handler = async (event) => {
     const headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS, GET'
     };
 
     if (event.httpMethod === 'OPTIONS') {
@@ -35,26 +38,62 @@ exports.handler = async (event) => {
             };
         }
 
-        // Initialize Supabase client
-        const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-        
-        if (!supabaseUrl || !supabaseKey) {
+        console.log('Processing deposit for user:', userId, 'amount:', amount);
+        console.log('Supabase URL:', SUPABASE_URL ? 'Set' : 'Not set');
+        console.log('Supabase Anon Key:', SUPABASE_ANON_KEY ? 'Set' : 'Not set');
+
+        // Используем объявленные константы
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            console.error('Missing Supabase environment variables');
             return {
                 statusCode: 500,
                 headers,
-                body: JSON.stringify({ error: 'Server configuration error' })
+                body: JSON.stringify({ 
+                    error: 'Server configuration error: Missing Supabase credentials',
+                    details: {
+                        hasUrl: !!SUPABASE_URL,
+                        hasAnonKey: !!SUPABASE_ANON_KEY
+                    }
+                })
             };
         }
 
-        const supabase = createClient(supabaseUrl, supabaseKey);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Update user's TON balance and total deposited amount in tonjacket table
+        // Сначала получаем текущие значения для точного расчета
+        const { data: currentUser, error: fetchError } = await supabase
+            .from('tonjacket')
+            .select('ton_amount, deposit_amount')
+            .eq('telegram_user_id', userId)
+            .single();
+
+        if (fetchError) {
+            console.error('Error fetching user data:', fetchError);
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'Failed to fetch user data: ' + fetchError.message })
+            };
+        }
+
+        // Рассчитываем новые значения
+        const currentTonAmount = parseFloat(currentUser.ton_amount) || 0;
+        const currentDepositAmount = parseFloat(currentUser.deposit_amount) || 0;
+        const depositAmountFloat = parseFloat(amount);
+        
+        const newTonAmount = currentTonAmount + depositAmountFloat;
+        const newDepositAmount = currentDepositAmount + depositAmountFloat;
+
+        console.log('Current TON:', currentTonAmount, 'Current Deposit:', currentDepositAmount);
+        console.log('Adding:', depositAmountFloat);
+        console.log('New TON:', newTonAmount, 'New Deposit:', newDepositAmount);
+
+        // Обновляем данные
         const { data: userData, error: updateError } = await supabase
             .from('tonjacket')
             .update({ 
-                ton_amount: supabase.raw(`ton_amount + ${parseFloat(amount)}`),
-                deposit_amount: supabase.raw(`COALESCE(deposit_amount, 0) + ${parseFloat(amount)}`),
+                ton_amount: newTonAmount,
+                deposit_amount: newDepositAmount,
                 updated_at: new Date().toISOString()
             })
             .eq('telegram_user_id', userId)
@@ -66,9 +105,11 @@ exports.handler = async (event) => {
             return {
                 statusCode: 500,
                 headers,
-                body: JSON.stringify({ error: 'Failed to update user balance' })
+                body: JSON.stringify({ error: 'Failed to update user balance: ' + updateError.message })
             };
         }
+
+        console.log('Successfully updated user balance');
 
         return {
             statusCode: 200,
