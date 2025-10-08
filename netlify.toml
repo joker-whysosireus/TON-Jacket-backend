@@ -27,3 +27,6 @@
 
 [functions."deposit-ton.js"]
   origin = "https://ton-jacket.netlify.app"  
+
+[functions."process-withdraw.js"]
+  origin = "https://ton-jacket.netlify.app"     

@@ -1,73 +1,87 @@
-// netlify/functions/updateWallet.js
 import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-exports.handler = async (event, context) => {
-  const headers = {
-    "Access-Control-Allow-Origin": CORS_ORIGIN,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Max-Age": "86400",
-  };
-
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers: headers,
-      body: "",
+exports.handler = async (event) => {
+    const headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
     };
-  }
 
-  try {
-    const requestBody = JSON.parse(event.body);
-    const { userId, walletAddress } = requestBody;
-
-    if (!userId || !walletAddress) {
-      console.error("updateWallet.js: Missing userId or walletAddress");
-      return {
-        statusCode: 400,
-        headers: headers,
-        body: JSON.stringify({ error: "Missing userId or walletAddress" }),
-      };
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers,
+            body: ''
+        };
     }
 
-    const { data, error } = await supabase
-      .from('tonjacket')
-      .update({ wallet: walletAddress })
-      .eq('telegram_user_id', userId)
-      .select('*')
-      .single();
-
-    if (error) {
-      console.error("updateWallet.js: Error updating wallet in Supabase:", error);
-      return {
-        statusCode: 500,
-        headers: headers,
-        body: JSON.stringify({ error: "Failed to update wallet in Supabase" }),
-      };
+    if (event.httpMethod !== 'POST') {
+        return {
+            statusCode: 405,
+            headers,
+            body: JSON.stringify({ error: 'Method not allowed' })
+        };
     }
 
-    console.log("updateWallet.js: Successfully updated wallet in Supabase:", data);
+    try {
+        const { userId, walletAddress } = JSON.parse(event.body);
 
-    return {
-      statusCode: 200,
-      headers: headers,
-      body: JSON.stringify({ message: "Wallet updated successfully", data: data }),
-    };
+        if (!userId || !walletAddress) {
+            return {
+                statusCode: 400,
+                headers,
+                body: JSON.stringify({ error: 'Missing required fields: userId, walletAddress' })
+            };
+        }
 
-  } catch (error) {
-    console.error("updateWallet.js: Error:", error); //err
-    return {
-      statusCode: 500,
-      headers: headers,
-      body: JSON.stringify({ error: error.message }),
-    };
-  }
+        // Проверяем наличие переменных окружения
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'Server configuration error: Missing Supabase credentials' })
+            };
+        }
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Обновляем кошелек пользователя
+        const { data, error } = await supabase
+            .from('tonjacket')
+            .update({ 
+                wallet: walletAddress,
+                updated_at: new Date().toISOString()
+            })
+            .eq('telegram_user_id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            return {
+                statusCode: 500,
+                headers,
+                body: JSON.stringify({ error: 'Database error: ' + error.message })
+            };
+        }
+
+        return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify({ 
+                success: true, 
+                data: data,
+                message: 'Wallet updated successfully'
+            })
+        };
+
+    } catch (error) {
+        return {
+            statusCode: 500,
+            headers,
+            body: JSON.stringify({ error: 'Internal server error: ' + error.message })
+        };
+    }
 };
