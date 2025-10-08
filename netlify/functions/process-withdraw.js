@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -39,62 +37,56 @@ exports.handler = async (event) => {
             };
         }
 
-        // Инициализация Supabase
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Получаем данные пользователя из базы tonjacket
+        const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/tonjacket?telegram_user_id=eq.${userId}&select=*`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
 
-        // Получаем данные пользователя
-        const { data: userData, error: userError } = await supabase
-            .from('tonjacket')
-            .select('*')
-            .eq('telegram_user_id', userId)
-            .single();
-
-        if (userError) {
-            return {
-                statusCode: 500,
-                headers,
-                body: JSON.stringify({ error: 'User not found' })
-            };
+        if (!userResponse.ok) {
+            throw new Error('Failed to fetch user data');
         }
 
-        const amountFloat = parseFloat(amount);
-        const currentTonAmount = parseFloat(userData.ton_amount) || 0;
+        const userData = await userResponse.json();
+        const user = userData[0];
 
-        // Проверяем достаточно ли средств
-        if (currentTonAmount < amountFloat) {
-            return {
-                statusCode: 400,
-                headers,
-                body: JSON.stringify({ error: 'Insufficient funds' })
-            };
+        // Получаем статистику пользователя из таблицы statistics
+        const statsResponse = await fetch(`${SUPABASE_URL}/rest/v1/statistics?telegram_user_id=eq.${userId}&select=*`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        let totalWon = 0;
+        let totalLost = 0;
+        
+        if (statsResponse.ok) {
+            const statsData = await statsResponse.json();
+            if (statsData.length > 0) {
+                totalWon = parseFloat(statsData[0].total_won) || 0;
+                totalLost = parseFloat(statsData[0].total_lost) || 0;
+            }
         }
 
-        // Обновляем баланс пользователя
-        const newTonAmount = currentTonAmount - amountFloat;
-        const newWithdrawAmount = (parseFloat(userData.withdraw_amount) || 0) + amountFloat;
+        const username = user?.telegram_username || user?.first_name || 'Неизвестно';
+        const betAmount = user?.bet_amount || 0;
 
-        const { data: updatedUser, error: updateError } = await supabase
-            .from('tonjacket')
-            .update({
-                ton_amount: newTonAmount,
-                withdraw_amount: newWithdrawAmount,
-                updated_at: new Date().toISOString()
-            })
-            .eq('telegram_user_id', userId)
-            .select()
-            .single();
-
-        if (updateError) {
-            return {
-                statusCode: 500,
-                headers,
-                body: JSON.stringify({ error: 'Failed to update balance' })
-            };
-        }
-
-        // Отправляем уведомления через Telegram Bot API
-        const username = userData.telegram_username || userData.first_name || 'Unknown';
-        const betAmount = userData.bet_amount || 0;
+        // Получаем текущую дату в формате "число месяц"
+        const now = new Date();
+        const months = [
+            'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+            'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+        ];
+        const day = now.getDate();
+        const month = months[now.getMonth()];
+        const timeString = `${day} ${month}`;
 
         // Уведомление пользователю
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -104,12 +96,27 @@ exports.handler = async (event) => {
             },
             body: JSON.stringify({
                 chat_id: userId,
-                text: `⏳ *Withdrawal Request Received*\n\n💎 *Amount:* ${amount} TON\n👛 *Wallet:* \`${walletAddress}\`\n\n📋 Your withdrawal is being processed. You will receive a notification from your wallet when the funds arrive in your balance.\n\nThank you for using TON Jacket! 🎰`,
-                parse_mode: 'Markdown'
+                text: `══════════════════\n` +
+                      `      💰 *WITHDRAWAL REQUEST*\n` +
+                      `══════════════════\n\n` +
+                      `💎 *Amount:* ${amount} TON\n` +
+                      `👛 *Wallet:* \`${walletAddress}\`\n\n` +
+                      `⏳ *Status:* Processing...\n\n` +
+                      `══════════════════\n` +
+                      `You will receive a notification from your wallet when the transaction is completed.`,
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [[
+                        {
+                            text: '🎮 Open TON Jacket',
+                            web_app: { url: 'https://your-webapp-url.com' }
+                        }
+                    ]]
+                }
             })
         });
 
-        // Уведомление создателю
+        // Уведомление создателю на русском с полной статистикой
         await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
             method: 'POST',
             headers: {
@@ -117,7 +124,19 @@ exports.handler = async (event) => {
             },
             body: JSON.stringify({
                 chat_id: CREATOR_ID,
-                text: `🔄 *NEW WITHDRAWAL REQUEST*\n\n👤 *User:* ${username}\n🆔 *ID:* ${userId}\n💎 *Amount:* ${amount} TON\n👛 *Wallet:* \`${walletAddress}\`\n🎰 *Total Bets:* ${betAmount} TON\n⏰ *Time:* ${new Date().toLocaleString()}`,
+                text: `══════════════════\n` +
+                      `   🔄 *НОВЫЙ ЗАПРОС НА ВЫВОД*\n` +
+                      `══════════════════\n\n` +
+                      `👤 *Пользователь:* ${username}\n` +
+                      `🆔 *ID:* ${userId}\n` +
+                      `💎 *Сумма вывода:* ${amount} TON\n` +
+                      `👛 *Кошелек:* \`${walletAddress}\`\n\n` +
+                      `📊 *СТАТИСТИКА ИГРОКА:*\n` +
+                      `🎰 *Всего ставок:* ${betAmount} TON\n` +
+                      `💰 *Всего выиграл:* ${totalWon.toFixed(2)} TON\n` +
+                      `💸 *Всего проиграл:* ${totalLost.toFixed(2)} TON\n` +
+                      `📈 *Баланс:* ${(totalWon - totalLost).toFixed(2)} TON\n\n` +
+                      `⏰ *Время:* ${timeString}`,
                 parse_mode: 'Markdown'
             })
         });
@@ -126,13 +145,13 @@ exports.handler = async (event) => {
             statusCode: 200,
             headers,
             body: JSON.stringify({ 
-                success: true, 
-                data: updatedUser,
-                message: 'Withdrawal processed successfully'
+                success: true,
+                message: 'Withdrawal notification sent successfully'
             })
         };
 
     } catch (error) {
+        console.error('Error in withdraw-notification function:', error);
         return {
             statusCode: 500,
             headers,

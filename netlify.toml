@@ -29,4 +29,7 @@
   origin = "https://ton-jacket.netlify.app"  
 
 [functions."process-withdraw.js"]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."update-statistics.js"]
   origin = "https://ton-jacket.netlify.app"     
