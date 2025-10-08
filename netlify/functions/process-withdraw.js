@@ -77,6 +77,7 @@ exports.handler = async (event) => {
 
         const username = user?.telegram_username || user?.first_name || 'Неизвестно';
         const betAmount = user?.bet_amount || 0;
+        const withdrawAmount = user?.withdraw_amount || 0; // Получаем текущее значение withdraw_amount
 
         // Получаем текущую дату в формате "число месяц"
         const now = new Date();
@@ -135,7 +136,8 @@ exports.handler = async (event) => {
                       `🎰 *Всего ставок:* ${betAmount} TON\n` +
                       `💰 *Всего выиграл:* ${totalWon.toFixed(2)} TON\n` +
                       `💸 *Всего проиграл:* ${totalLost.toFixed(2)} TON\n` +
-                      `📈 *Баланс:* ${(totalWon - totalLost).toFixed(2)} TON\n\n` +
+                      `📈 *Баланс:* ${(totalWon - totalLost).toFixed(2)} TON\n` +
+                      `💳 *Уже выведено:* ${withdrawAmount.toFixed(2)} TON\n\n` +
                       `⏰ *Время:* ${timeString}`,
                 parse_mode: 'Markdown'
             })
