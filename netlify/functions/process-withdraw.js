@@ -98,11 +98,11 @@ exports.handler = async (event) => {
             body: JSON.stringify({
                 chat_id: userId,
                 text: `══════════════════\n` +
-                      `      💰 *WITHDRAWAL REQUEST*\n` +
+                      `*WITHDRAWAL REQUEST*\n` +
                       `══════════════════\n\n` +
-                      `💎 *Amount:* ${amount} TON\n` +
-                      `👛 *Wallet:* \`${walletAddress}\`\n\n` +
-                      `⏳ *Status:* Processing...\n\n` +
+                      `*Amount:* ${amount} TON\n` +
+                      `*Wallet:* \`${walletAddress}\`\n\n` +
+                      `*Status:* Processing...\n\n` +
                       `══════════════════\n` +
                       `You will receive a notification from your wallet when the transaction is completed.`,
                 parse_mode: 'Markdown',
