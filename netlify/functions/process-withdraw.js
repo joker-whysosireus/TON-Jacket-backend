@@ -109,8 +109,8 @@ exports.handler = async (event) => {
                 reply_markup: {
                     inline_keyboard: [[
                         {
-                            text: '🎮 Open TON Jacket',
-                            web_app: { url: 'https://your-webapp-url.com' }
+                            text: '🎰Spin!',
+                            web_app: { url: 'https://ton-jacket.netlify.app/' }
                         }
                     ]]
                 }
