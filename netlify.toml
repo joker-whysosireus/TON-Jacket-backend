@@ -32,4 +32,7 @@
   origin = "https://ton-jacket.netlify.app"
 
 [functions."update-statistics.js"]
+  origin = "https://ton-jacket.netlify.app"
+
+[functions."claim-task.js"]
   origin = "https://ton-jacket.netlify.app"     
