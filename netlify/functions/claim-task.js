@@ -46,25 +46,13 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if task is already claimed
-    const claimedTasks = user.claimed_tasks || [];
-    if (claimedTasks.includes(taskId)) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "Task already claimed" })
-      };
-    }
-
-    // Update user data
+    // Update user data - просто увеличиваем coins
     const newCoins = parseFloat((user.coins + rewardAmount).toFixed(3));
-    const newClaimedTasks = [...claimedTasks, taskId];
 
     const { data: updatedUser, error: updateError } = await supabase
       .from('tonjacket')
       .update({
-        coins: newCoins,
-        claimed_tasks: newClaimedTasks
+        coins: newCoins
       })
       .eq('telegram_user_id', telegramUserId)
       .select('*')
@@ -88,7 +76,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: "Internal server errorr" })
+      body: JSON.stringify({ error: "Internal server error" })
     };
   }
 };
