@@ -189,7 +189,7 @@ exports.handler = async (event, context) => {
                         coins: 500.000,
                         coins_for_invite: 0.000,
                         bet_amount: 0.000,
-                        ton_amount: 100.000,
+                        ton_amount: 0.000,
                         invite_link: inviteLink
                     };
 
