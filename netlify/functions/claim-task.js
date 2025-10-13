@@ -21,13 +21,28 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { taskId, rewardAmount, telegramUserId } = JSON.parse(event.body);
+    // Добавляем логирование для отладки
+    console.log("Received event body:", event.body);
+    
+    const body = JSON.parse(event.body);
+    console.log("Parsed body:", body);
+
+    // Поддерживаем оба варианта параметров для обратной совместимости
+    const taskId = body.taskId || body.id;
+    const rewardAmount = body.rewardAmount || body.amount;
+    const telegramUserId = body.telegramUserId || body.telegram_user_id;
+
+    console.log("Extracted parameters:", { taskId, rewardAmount, telegramUserId });
 
     if (!taskId || !rewardAmount || !telegramUserId) {
+      console.error("Missing required parameters");
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: "Missing required parameters" })
+        body: JSON.stringify({ 
+          error: "Missing required parameters",
+          received: body 
+        })
       };
     }
 
@@ -39,15 +54,20 @@ exports.handler = async (event, context) => {
       .single();
 
     if (userError) {
+      console.error("User not found:", userError);
       return {
         statusCode: 404,
         headers,
-        body: JSON.stringify({ error: "User not found" })
+        body: JSON.stringify({ error: "User not found: " + userError.message })
       };
     }
 
-    // Update user data - просто увеличиваем coins
+    console.log("Found user:", user);
+
+    // Update user data - увеличиваем coins
     const newCoins = parseFloat((user.coins + rewardAmount).toFixed(3));
+
+    console.log("Updating coins:", { oldCoins: user.coins, rewardAmount, newCoins });
 
     const { data: updatedUser, error: updateError } = await supabase
       .from('tonjacket')
@@ -59,24 +79,31 @@ exports.handler = async (event, context) => {
       .single();
 
     if (updateError) {
+      console.error("Update error:", updateError);
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: "Failed to update user data" })
+        body: JSON.stringify({ error: "Failed to update user data: " + updateError.message })
       };
     }
+
+    console.log("User updated successfully:", updatedUser);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ userData: updatedUser })
+      body: JSON.stringify({ 
+        userData: updatedUser,
+        message: "Reward claimed successfully"
+      })
     };
 
   } catch (error) {
+    console.error("Internal server error:", error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: "Internal server error" })
+      body: JSON.stringify({ error: "Internal server error: " + error.message })
     };
   }
 };
