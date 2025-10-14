@@ -2,37 +2,40 @@
   functions = "netlify/functions"
 
 [functions.auth]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."create-invoice"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."verify-payment"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."updateWallet"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."update-coins.js"]
-  origin = "https://ton-jacket.netlify.app" 
+  origin = "https://tonmania.space" 
 
 [functions."update-bet.js"]
-  origin = "https://ton-jacket.netlify.app" 
+  origin = "https://tonmania.space" 
 
 [functions."update-ton"]
-  origin = "https://ton-jacket.netlify.app" 
+  origin = "https://tonmania.space" 
   
 [functions."convertCoinsToTON.js"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."deposit-ton.js"]
-  origin = "https://ton-jacket.netlify.app"  
+  origin = "https://tonmania.space"  
 
 [functions."process-withdraw.js"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."update-statistics.js"]
-  origin = "https://ton-jacket.netlify.app"
+  origin = "https://tonmania.space"
 
 [functions."claim-task.js"]
-  origin = "https://ton-jacket.netlify.app"     
+  origin = "https://tonmania.space"     
+
+[functions."ads-reward.js"]
+  origin = "https://tonmania.space"
