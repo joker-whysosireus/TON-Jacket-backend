@@ -39,28 +39,21 @@ exports.handler = async (event) => {
         }
 
         console.log('Processing deposit for user:', userId, 'amount:', amount);
-        console.log('Supabase URL:', SUPABASE_URL ? 'Set' : 'Not set');
-        console.log('Supabase Anon Key:', SUPABASE_ANON_KEY ? 'Set' : 'Not set');
 
-        // Используем объявленные константы
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             console.error('Missing Supabase environment variables');
             return {
                 statusCode: 500,
                 headers,
                 body: JSON.stringify({ 
-                    error: 'Server configuration error: Missing Supabase credentials',
-                    details: {
-                        hasUrl: !!SUPABASE_URL,
-                        hasAnonKey: !!SUPABASE_ANON_KEY
-                    }
+                    error: 'Server configuration error: Missing Supabase credentials'
                 })
             };
         }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Сначала получаем текущие значения для точного расчета
+        // Получаем текущие значения
         const { data: currentUser, error: fetchError } = await supabase
             .from('tonjacket')
             .select('ton_amount, deposit_amount')
@@ -76,17 +69,23 @@ exports.handler = async (event) => {
             };
         }
 
-        // Рассчитываем новые значения
+        // Рассчитываем сумму с бонусом 1.5x
+        const depositAmountFloat = parseFloat(amount);
+        const bonusMultiplier = 1.5; // Бонус 50%
+        const totalAmountWithBonus = depositAmountFloat * bonusMultiplier;
+        
         const currentTonAmount = parseFloat(currentUser.ton_amount) || 0;
         const currentDepositAmount = parseFloat(currentUser.deposit_amount) || 0;
-        const depositAmountFloat = parseFloat(amount);
         
-        const newTonAmount = currentTonAmount + depositAmountFloat;
+        const newTonAmount = currentTonAmount + totalAmountWithBonus;
         const newDepositAmount = currentDepositAmount + depositAmountFloat;
 
-        console.log('Current TON:', currentTonAmount, 'Current Deposit:', currentDepositAmount);
-        console.log('Adding:', depositAmountFloat);
-        console.log('New TON:', newTonAmount, 'New Deposit:', newDepositAmount);
+        console.log('Deposit details:', {
+            deposited: depositAmountFloat,
+            withBonus: totalAmountWithBonus,
+            currentTon: currentTonAmount,
+            newTon: newTonAmount
+        });
 
         // Обновляем данные
         const { data: userData, error: updateError } = await supabase
@@ -109,7 +108,7 @@ exports.handler = async (event) => {
             };
         }
 
-        console.log('Successfully updated user balance');
+        console.log('Successfully updated user balance with bonus');
 
         return {
             statusCode: 200,
@@ -117,7 +116,11 @@ exports.handler = async (event) => {
             body: JSON.stringify({ 
                 success: true, 
                 data: userData,
-                message: 'TON deposited successfully'
+                bonusApplied: true,
+                depositedAmount: depositAmountFloat,
+                receivedAmount: totalAmountWithBonus,
+                bonusAmount: totalAmountWithBonus - depositAmountFloat,
+                message: `TON deposited successfully! You received ${totalAmountWithBonus} TON (${depositAmountFloat} + ${totalAmountWithBonus - depositAmountFloat} bonus)`
             })
         };
 
