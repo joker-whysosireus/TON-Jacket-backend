@@ -28,7 +28,15 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { userId, amount, transactionHash } = JSON.parse(event.body);
+        const { 
+            userId, 
+            amount, 
+            transactionType, 
+            transactionData, 
+            walletHistoryUrl,
+            userWallet,
+            timestamp 
+        } = JSON.parse(event.body);
 
         if (!userId || !amount) {
             return {
@@ -38,8 +46,19 @@ exports.handler = async (event) => {
             };
         }
 
-        // 🔴 ВАЖНО: Логируем хэш транзакции
-        console.log('Processing deposit for user:', userId, 'amount:', amount, 'transactionHash:', transactionHash || 'NOT PROVIDED');
+        // 🔴 ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ВСЕХ ДАННЫХ ТРАНЗАКЦИИ
+        console.log('=== DEPOSIT REQUEST DETAILS ===');
+        console.log('User ID:', userId);
+        console.log('Amount:', amount, 'TON');
+        console.log('Transaction Type:', transactionType || 'NOT PROVIDED');
+        console.log('Transaction Data:', transactionData ? 
+            (transactionData.length > 100 ? transactionData.substring(0, 100) + '...' : transactionData) 
+            : 'NOT PROVIDED');
+        console.log('Wallet History URL:', walletHistoryUrl || 'NOT PROVIDED');
+        console.log('User Wallet:', userWallet || 'NOT PROVIDED');
+        console.log('Timestamp:', timestamp || 'NOT PROVIDED');
+        console.log('Deposit Wallet:', "UQB_2coQNHxdWZN0b7y9QUy13jLl2XNaN2yPcicFJbCbhSEK");
+        console.log('==============================');
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             console.error('Missing Supabase environment variables');
@@ -72,7 +91,7 @@ exports.handler = async (event) => {
 
         // Рассчитываем сумму с бонусом 1.5x
         const depositAmountFloat = parseFloat(amount);
-        const bonusMultiplier = 1.5; // Бонус 50%
+        const bonusMultiplier = 1.5;
         const totalAmountWithBonus = depositAmountFloat * bonusMultiplier;
         
         const currentTonAmount = parseFloat(currentUser.ton_amount) || 0;
@@ -81,12 +100,12 @@ exports.handler = async (event) => {
         const newTonAmount = currentTonAmount + totalAmountWithBonus;
         const newDepositAmount = currentDepositAmount + depositAmountFloat;
 
-        console.log('Deposit details:', {
+        console.log('💰 Balance update details:', {
+            oldBalance: currentTonAmount,
             deposited: depositAmountFloat,
-            withBonus: totalAmountWithBonus,
-            currentTon: currentTonAmount,
-            newTon: newTonAmount,
-            transactionHash: transactionHash || 'NOT PROVIDED'
+            bonus: totalAmountWithBonus - depositAmountFloat,
+            newBalance: newTonAmount,
+            totalReceived: totalAmountWithBonus
         });
 
         // Обновляем данные
@@ -110,7 +129,7 @@ exports.handler = async (event) => {
             };
         }
 
-        console.log('Successfully updated user balance with bonus. Transaction hash:', transactionHash || 'UNKNOWN');
+        console.log('✅ Successfully updated user balance with bonus');
 
         return {
             statusCode: 200,
@@ -122,13 +141,14 @@ exports.handler = async (event) => {
                 depositedAmount: depositAmountFloat,
                 receivedAmount: totalAmountWithBonus,
                 bonusAmount: totalAmountWithBonus - depositAmountFloat,
-                transactionHash: transactionHash, // Возвращаем хэш в ответе
-                message: `TON deposited successfully! You received ${totalAmountWithBonus} TON (${depositAmountFloat} + ${totalAmountWithBonus - depositAmountFloat} bonus)`
+                transactionType: transactionType,
+                walletHistoryUrl: walletHistoryUrl,
+                message: `TON deposited successfully! You received ${totalAmountWithBonus.toFixed(2)} TON (${depositAmountFloat.toFixed(2)} + ${(totalAmountWithBonus - depositAmountFloat).toFixed(2)} bonus)`
             })
         };
 
     } catch (error) {
-        console.error('Error in deposit-ton function:', error);
+        console.error('❌ Error in deposit-ton function:', error);
         return {
             statusCode: 500,
             headers,
