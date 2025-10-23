@@ -39,3 +39,6 @@
 
 [functions."ads-reward.js"]
   origin = "https://tonmania.space"
+
+[functions."update-stars.js"]
+  origin = "https://tonmania.space"

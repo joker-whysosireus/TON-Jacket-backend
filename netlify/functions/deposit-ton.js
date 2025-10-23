@@ -28,7 +28,7 @@ exports.handler = async (event) => {
     }
 
     try {
-        const { userId, amount } = JSON.parse(event.body);
+        const { userId, amount, transactionHash } = JSON.parse(event.body);
 
         if (!userId || !amount) {
             return {
@@ -38,7 +38,8 @@ exports.handler = async (event) => {
             };
         }
 
-        console.log('Processing deposit for user:', userId, 'amount:', amount);
+        // 🔴 ВАЖНО: Логируем хэш транзакции
+        console.log('Processing deposit for user:', userId, 'amount:', amount, 'transactionHash:', transactionHash || 'NOT PROVIDED');
 
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
             console.error('Missing Supabase environment variables');
@@ -84,7 +85,8 @@ exports.handler = async (event) => {
             deposited: depositAmountFloat,
             withBonus: totalAmountWithBonus,
             currentTon: currentTonAmount,
-            newTon: newTonAmount
+            newTon: newTonAmount,
+            transactionHash: transactionHash || 'NOT PROVIDED'
         });
 
         // Обновляем данные
@@ -108,7 +110,7 @@ exports.handler = async (event) => {
             };
         }
 
-        console.log('Successfully updated user balance with bonus');
+        console.log('Successfully updated user balance with bonus. Transaction hash:', transactionHash || 'UNKNOWN');
 
         return {
             statusCode: 200,
@@ -120,6 +122,7 @@ exports.handler = async (event) => {
                 depositedAmount: depositAmountFloat,
                 receivedAmount: totalAmountWithBonus,
                 bonusAmount: totalAmountWithBonus - depositAmountFloat,
+                transactionHash: transactionHash, // Возвращаем хэш в ответе
                 message: `TON deposited successfully! You received ${totalAmountWithBonus} TON (${depositAmountFloat} + ${totalAmountWithBonus - depositAmountFloat} bonus)`
             })
         };
