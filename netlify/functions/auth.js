@@ -190,6 +190,7 @@ exports.handler = async (event, context) => {
                         coins_for_invite: 0.000,
                         bet_amount: 0.000,
                         ton_amount: 0.000,
+                        ton_for_invite: 0.000, // Добавлен новый столбец
                         invite_link: inviteLink
                     };
 
@@ -233,13 +234,19 @@ exports.handler = async (event, context) => {
                             const newCoinsForInvite = parseFloat(((referrer.coins_for_invite || 0) + 50).toFixed(3));
                             const newCoins = parseFloat(((referrer.coins || 0) + 50).toFixed(3));
                             const newInvitedFriends = (referrer.invited_friends || 0) + 1;
+                            
+                            // Добавлено: увеличение ton_for_invite и ton_amount на 0.001
+                            const newTonForInvite = parseFloat(((referrer.ton_for_invite || 0) + 0.001).toFixed(3));
+                            const newTonAmount = parseFloat(((referrer.ton_amount || 0) + 0.001).toFixed(3));
 
                             const { data: updatedReferrer, error: updateReferrerError } = await supabase
                                 .from('tonjacket')
                                 .update({
                                     invited_friends: newInvitedFriends,
                                     coins_for_invite: newCoinsForInvite,
-                                    coins: newCoins
+                                    coins: newCoins,
+                                    ton_for_invite: newTonForInvite, // Добавлено
+                                    ton_amount: newTonAmount // Добавлено
                                 })
                                 .eq('telegram_user_id', referralCode)
                                 .select('*')
